@@ -27,8 +27,10 @@
     <PackageVersion Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="7.0.8" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.UI" Version="7.0.5" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="7.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="7.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Net.Http.Headers" Version="2.1.1" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="7.0.6" />
     <PackageVersion Include="Microsoft.Web.LibraryManager.Build" Version="2.1.175" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="7.0.5" />
@@ -39,6 +41,7 @@
     </PackageVersion>
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.18.1" />
     <PackageVersion Include="MinimalApi.Endpoint" Version="1.3.0" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageVersion Include="System.Net.Http.Json" Version="7.0.1" />
     <PackageVersion Include="System.Security.Claims" Version="4.3.0" />
     <PackageVersion Include="System.Text.Json" Version="7.0.2" />

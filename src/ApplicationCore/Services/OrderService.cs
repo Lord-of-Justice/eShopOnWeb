@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Ardalis.GuardClauses;
 using Microsoft.eShopWeb.ApplicationCore.Entities;
@@ -6,6 +7,8 @@ using Microsoft.eShopWeb.ApplicationCore.Entities.BasketAggregate;
 using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.ApplicationCore.Specifications;
+using Microsoft.Net.Http.Headers;
+using Newtonsoft.Json;
 
 namespace Microsoft.eShopWeb.ApplicationCore.Services;
 
@@ -15,16 +18,19 @@ public class OrderService : IOrderService
     private readonly IUriComposer _uriComposer;
     private readonly IRepository<Basket> _basketRepository;
     private readonly IRepository<CatalogItem> _itemRepository;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public OrderService(IRepository<Basket> basketRepository,
         IRepository<CatalogItem> itemRepository,
         IRepository<Order> orderRepository,
-        IUriComposer uriComposer)
+        IUriComposer uriComposer,
+        IHttpClientFactory httpClientFactory)
     {
         _orderRepository = orderRepository;
         _uriComposer = uriComposer;
         _basketRepository = basketRepository;
         _itemRepository = itemRepository;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task CreateOrderAsync(int basketId, Address shippingAddress)
@@ -49,5 +55,24 @@ public class OrderService : IOrderService
         var order = new Order(basket.BuyerId, shippingAddress, items);
 
         await _orderRepository.AddAsync(order);
+        await SendHttpRequestOnTrigger(order);
+    }
+
+    private async Task SendHttpRequestOnTrigger(Order order)
+    {
+        var httpRequestMessage = new HttpRequestMessage(
+            HttpMethod.Post,
+            "https://orderitemsreserver-func.azurewebsites.net/api/OrderItemsReserver?code=X8zAmUCdtlQ5f9CuEBJYCMwSNcZoHmzFk1VZVABfTvLlAzFuYqWl1Q==")
+        {
+            Headers =
+            {
+                { HeaderNames.Accept, "*/*" },
+                { HeaderNames.UserAgent, "HttpRequestsSample" }
+            },
+            Content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json")
+        };
+
+        var httpClient = _httpClientFactory.CreateClient();
+        var httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
     }
 }
