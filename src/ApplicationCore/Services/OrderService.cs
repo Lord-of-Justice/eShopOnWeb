@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Ardalis.GuardClauses;
@@ -19,18 +20,21 @@ public class OrderService : IOrderService
     private readonly IRepository<Basket> _basketRepository;
     private readonly IRepository<CatalogItem> _itemRepository;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly string _functionUrl;
 
     public OrderService(IRepository<Basket> basketRepository,
         IRepository<CatalogItem> itemRepository,
         IRepository<Order> orderRepository,
         IUriComposer uriComposer,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        string functionUrl)
     {
         _orderRepository = orderRepository;
         _uriComposer = uriComposer;
         _basketRepository = basketRepository;
         _itemRepository = itemRepository;
         _httpClientFactory = httpClientFactory;
+        _functionUrl = functionUrl;
     }
 
     public async Task CreateOrderAsync(int basketId, Address shippingAddress)
@@ -53,26 +57,37 @@ public class OrderService : IOrderService
         }).ToList();
 
         var order = new Order(basket.BuyerId, shippingAddress, items);
+        var orderMessage = new OrderMessage(shippingAddress, items, order.Total());
 
         await _orderRepository.AddAsync(order);
-        await SendHttpRequestOnTrigger(order);
+        await SendHttpRequestOnTrigger(orderMessage);
     }
 
-    private async Task SendHttpRequestOnTrigger(Order order)
+    private async Task SendHttpRequestOnTrigger(OrderMessage order)
     {
-        var httpRequestMessage = new HttpRequestMessage(
-            HttpMethod.Post,
-            "https://orderitemsreserver-func.azurewebsites.net/api/OrderItemsReserver?code=X8zAmUCdtlQ5f9CuEBJYCMwSNcZoHmzFk1VZVABfTvLlAzFuYqWl1Q==")
+        try
         {
-            Headers =
-            {
-                { HeaderNames.Accept, "*/*" },
-                { HeaderNames.UserAgent, "HttpRequestsSample" }
-            },
-            Content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json")
-        };
+            //var httpRequestMessage = new HttpRequestMessage(
+            //    HttpMethod.Post,
+            //    "https://orderitemsreserver-func.azurewebsites.net/api/OrderItemsReserver?code=X8zAmUCdtlQ5f9CuEBJYCMwSNcZoHmzFk1VZVABfTvLlAzFuYqWl1Q==")
+            //{
+            //    Headers =
+            //    {
+            //        { HeaderNames.Accept, "*/*" },
+            //        { HeaderNames.UserAgent, "HttpRequestsSample" }
+            //    },
+            //    Content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json")
+            //};
 
-        var httpClient = _httpClientFactory.CreateClient();
-        var httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
+            var content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json");
+
+            var httpClient = _httpClientFactory.CreateClient();
+            await httpClient.PostAsync(_functionUrl, content);
+            //var httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Can not send a message to trigger.");
+        }
     }
 }
