@@ -57,7 +57,7 @@ public class OrderService : IOrderService
         }).ToList();
 
         var order = new Order(basket.BuyerId, shippingAddress, items);
-        var orderMessage = new OrderMessage(shippingAddress, items, order.Total());
+        var orderMessage = new OrderMessage(basket.BuyerId, shippingAddress, items, order.Total());
 
         await _orderRepository.AddAsync(order);
         await SendHttpRequestOnTrigger(orderMessage);
@@ -84,6 +84,10 @@ public class OrderService : IOrderService
             var httpClient = _httpClientFactory.CreateClient();
             await httpClient.PostAsync(_functionUrl, content);
             //var httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
+
+            //var client = new HttpClient();
+            //var response = await client.PostAsync(_functionUrl, content);
+            //var res = response.Content.ReadAsStringAsync();
         }
         catch (Exception ex)
         {
