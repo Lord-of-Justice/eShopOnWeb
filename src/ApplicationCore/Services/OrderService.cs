@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Ardalis.GuardClauses;
+using Azure.Messaging.ServiceBus;
 using Microsoft.eShopWeb.ApplicationCore.Entities;
 using Microsoft.eShopWeb.ApplicationCore.Entities.BasketAggregate;
 using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
@@ -57,7 +58,7 @@ public class OrderService : IOrderService
         }).ToList();
 
         var order = new Order(basket.BuyerId, shippingAddress, items);
-        var orderMessage = new OrderMessage(basket.BuyerId, shippingAddress, items, order.Total());
+        var orderMessage = new OrderMessage(items, order.Total());
 
         await _orderRepository.AddAsync(order);
         await SendHttpRequestOnTrigger(orderMessage);
@@ -65,33 +66,28 @@ public class OrderService : IOrderService
 
     private async Task SendHttpRequestOnTrigger(OrderMessage order)
     {
+        var serviceBusConnectionString = "Endpoint=sb://orderitemsreservermessages.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=fPo/UpC+7viFmunF44uNSXdvaNxS04FIw+ASbPBIXvg=";
+        var queueName = "orders";
+
+        await using var client = new ServiceBusClient(serviceBusConnectionString);
+        await using ServiceBusSender sender = client.CreateSender(queueName);
         try
         {
-            //var httpRequestMessage = new HttpRequestMessage(
-            //    HttpMethod.Post,
-            //    "https://orderitemsreserver-func.azurewebsites.net/api/OrderItemsReserver?code=X8zAmUCdtlQ5f9CuEBJYCMwSNcZoHmzFk1VZVABfTvLlAzFuYqWl1Q==")
-            //{
-            //    Headers =
-            //    {
-            //        { HeaderNames.Accept, "*/*" },
-            //        { HeaderNames.UserAgent, "HttpRequestsSample" }
-            //    },
-            //    Content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json")
-            //};
-
-            var content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json");
-
-            var httpClient = _httpClientFactory.CreateClient();
-            await httpClient.PostAsync(_functionUrl, content);
-            //var httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
-
-            //var client = new HttpClient();
-            //var response = await client.PostAsync(_functionUrl, content);
-            //var res = response.Content.ReadAsStringAsync();
+            string messageBody = JsonConvert.SerializeObject(order);
+            var message = new ServiceBusMessage(messageBody);
+            //Console.WriteLine($"Sending message: {messageBody}");
+            await sender.SendMessageAsync(message);
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            throw new Exception("Can not send a message to trigger.");
+            throw new Exception($"Can not send a message :: Exception: {exception.Message}");
+        }
+        finally
+        {
+            // Calling DisposeAsync on client types is required to ensure that network
+            // resources and other unmanaged objects are properly cleaned up.
+            await sender.DisposeAsync();
+            await client.DisposeAsync();
         }
     }
 }
