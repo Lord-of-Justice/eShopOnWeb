@@ -59,14 +59,16 @@ public class OrderService : IOrderService
 
         var order = new Order(basket.BuyerId, shippingAddress, items);
         var orderMessage = new OrderMessage(items, order.Total());
+        var deliverymessage = new OrderDeliveryMessage(basket.BuyerId, shippingAddress, items, order.Total());
 
         await _orderRepository.AddAsync(order);
-        await SendHttpRequestOnTrigger(orderMessage);
+        await SendMessageToServiceBus(orderMessage);
+        await SendHttpRequestOnTrigger(deliverymessage);
     }
 
-    private async Task SendHttpRequestOnTrigger(OrderMessage order)
+    private async Task SendMessageToServiceBus(OrderMessage order)
     {
-        var serviceBusConnectionString = "Endpoint=sb://orderitemsreservermessages.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=fPo/UpC+7viFmunF44uNSXdvaNxS04FIw+ASbPBIXvg=";
+        var serviceBusConnectionString = "Endpoint=sb://eshop-azureservicebus.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=aQgEx+kPHbBDVCi/P5pv0fKeH2DaVjXE6+ASbPa3AjY=";
         var queueName = "orders";
 
         await using var client = new ServiceBusClient(serviceBusConnectionString);
@@ -75,12 +77,11 @@ public class OrderService : IOrderService
         {
             string messageBody = JsonConvert.SerializeObject(order);
             var message = new ServiceBusMessage(messageBody);
-            //Console.WriteLine($"Sending message: {messageBody}");
             await sender.SendMessageAsync(message);
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            throw new Exception($"Can not send a message :: Exception: {exception.Message}");
+            throw new Exception($"Can not send a message to service bus. Exception: {ex.Message}");
         }
         finally
         {
@@ -88,6 +89,21 @@ public class OrderService : IOrderService
             // resources and other unmanaged objects are properly cleaned up.
             await sender.DisposeAsync();
             await client.DisposeAsync();
+        }
+    }
+
+    private async Task SendHttpRequestOnTrigger(OrderDeliveryMessage order)
+    {
+        try
+        {
+            var content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json");
+
+            var httpClient = _httpClientFactory.CreateClient();
+            await httpClient.PostAsync(_functionUrl, content);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Can not send a message to trigger. Exception: {ex.Message}");
         }
     }
 }
