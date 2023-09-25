@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">	
 	<ItemGroup>
+		<PackageReference Include="BlazorApplicationInsights" />
 		<PackageReference Include="Blazored.LocalStorage" />
 		<PackageReference Include="BlazorInputFile" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
