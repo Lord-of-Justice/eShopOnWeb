@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using BlazorAdmin;
 using BlazorAdmin.Services;
+using BlazorApplicationInsights;
 using Blazored.LocalStorage;
 using BlazorShared;
 using BlazorShared.Models;
@@ -14,6 +15,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
+
+builder.Services.AddBlazorApplicationInsights();
+
 builder.RootComponents.Add<App>("#admin");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
