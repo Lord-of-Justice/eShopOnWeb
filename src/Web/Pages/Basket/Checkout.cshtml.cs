@@ -63,6 +63,10 @@ public class CheckoutModel : PageModel
             _logger.LogWarning(emptyBasketOnCheckoutException.Message);
             return RedirectToPage("/Basket/Index");
         }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex.Message);
+        }
 
         return RedirectToPage("Success");
     }
